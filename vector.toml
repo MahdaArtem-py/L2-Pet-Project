@@ -1,0 +1,20 @@
+[sources.app_logs]
+type = "file"
+include = ["/var/log/bank/app.log"]
+read_from = "beginning"
+
+[transforms.parse_json]
+type = "remap"
+inputs = ["app_logs"]
+source = '''
+. = parse_json!(.message)
+.app_name = "bank-core"
+'''
+
+[sinks.elasticsearch]
+type = "elasticsearch"
+inputs = ["parse_json"]
+endpoints = ["http://elasticsearch:9200"]
+
+[sinks.elasticsearch.bulk]
+index = "bank-logs-%Y.%m.%d"

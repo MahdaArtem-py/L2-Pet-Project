@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pydantic
+python-json-logger
+sentry-sdk
+prometheus-fastapi-instrumentator

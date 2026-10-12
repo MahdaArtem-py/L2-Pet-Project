@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-8">
+
+  <div class="max-w-2xl mx-auto space-y-6">
+    <!-- Шапка -->
+    <div class="border-b border-slate-700 pb-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-emerald-400">🏦 Bank Web Client</h1>
+      <span class="text-xs bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-slate-400">Bank Service</span>
+    </div>
+
+    <!-- Картка балансу -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <p class="text-xs text-slate-400 uppercase">Поточна картка</p>
+          <p class="font-mono text-lg font-semibold text-slate-200" id="cardDisplay">**** **** **** 8888</p>
+        </div>
+        <button onclick="fetchBalance()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition">
+          🔄 Оновити баланс
+        </button>
+      </div>
+
+      <div class="border-t border-slate-700 pt-3">
+        <p class="text-xs text-slate-400">Баланс:</p>
+        <p class="text-3xl font-extrabold text-emerald-400" id="balanceDisplay">--.-- UAH</p>
+      </div>
+    </div>
+
+    <!-- Кнопки L2 Сценаріїв -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg space-y-4">
+      <h2 class="text-lg font-semibold border-b border-slate-700 pb-2">Тестування Сценаріїв</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <!-- 1. Поповнити (200 OK) -->
+        <button onclick="topUpCard()" class="bg-emerald-600 hover:bg-emerald-500 font-medium py-2.5 px-4 rounded-lg text-sm transition text-left">
+          ✅ Поповнити на +500 UAH <br>
+          <span class="text-xs text-emerald-200 font-normal">(Status 200 OK)</span>
+        </button>
+
+        <!-- 2. Спроба переказу понад баланс (400 Bad Request) -->
+        <button onclick="makeOverdraftTransfer()" class="bg-amber-600 hover:bg-amber-500 font-medium py-2.5 px-4 rounded-lg text-sm transition text-left">
+          ⚠️ Переказати 1000 UAH <br>
+          <span class="text-xs text-amber-200 font-normal">(Status 400 Insufficient Funds)</span>
+        </button>
+
+        <!-- 3. Збій платіжного процесингу (500 Internal Error) -->
+        <button onclick="triggerBackendCrash()" class="bg-rose-600 hover:bg-rose-500 font-medium py-2.5 px-4 rounded-lg text-sm transition text-left md:col-span-2">
+          💥 Оплата через SWIFT (Краш) <br>
+          <span class="text-xs text-rose-200 font-normal">(Status 500 Backend Crash)</span>
+        </button>
+
+        <!-- 4. Переказ на неіснуючу картку (404 Not Found) -->
+        <button onclick="makeInvalidCardTransfer()" class="bg-purple-600 hover:bg-purple-500 font-medium py-2.5 px-4 rounded-lg text-sm transition text-left">
+          🔍 Переказ на фейк-картку <br>
+          <span class="text-xs text-purple-200 font-normal">(Status 404 Card Not Found)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Консоль відповіді від сервера -->
+    <div class="bg-black/80 border border-slate-800 rounded-xl p-4 font-mono text-xs space-y-2">
+      <div class="flex justify-between text-slate-500 border-b border-slate-800 pb-1">
+        <span>Server Response Log</span>
+        <span id="traceIdTag">TraceID: null</span>
+      </div>
+      <pre id="outputLog" class="text-slate-300 overflow-x-auto whitespace-pre-wrap">Запуск готовий. Натисніть будь-яку кнопку...</pre>
+    </div>
+  </div>
+
+  <script>
+const API_URL = "http://127.0.0.1:8000";
+    const CURRENT_CARD = "5375414199998888"; // Марія Коваленко (початковий баланс 50 грн)
+
+    function generateTraceId() {
+      return "web-trace-" + Math.random().toString(36).substring(2, 10);
+    }
+
+    async function sendRequest(endpoint, method = "GET", body = null) {
+      const traceId = generateTraceId();
+      document.getElementById("traceIdTag").innerText = `TraceID: ${traceId}`;
+      const logElement = document.getElementById("outputLog");
+      logElement.innerText = "Надсилання запиту...";
+
+      try {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+          method: method,
+          headers: {
+            "Content-Type": "application/json",
+            "X-Trace-ID": traceId
+          },
+          body: body ? JSON.stringify(body) : null
+        });
+
+        const data = await response.json();
+
+        logElement.innerText = JSON.stringify({
+          http_status: response.status,
+          trace_id: response.headers.get("X-Trace-ID") || traceId,
+          response_data: data
+        }, null, 2);
+
+        return { status: response.status, data };
+      } catch (err) {
+        logElement.innerText = `Network Error / Server unreachable:\n${err.message}`;
+      }
+    }
+
+    // 1. Отримати баланс
+    async function fetchBalance() {
+      const res = await sendRequest(`/api/v1/cards/${CURRENT_CARD}/balance`);
+      if (res && res.data && res.data.balance !== undefined) {
+        document.getElementById("balanceDisplay").innerText = `${res.data.balance.toFixed(2)} UAH`;
+      }
+    }
+
+    // 2. Поповнити (+500)
+    async function topUpCard() {
+      await sendRequest('/api/v1/cards/addmoney', 'POST', {
+        card_number: CURRENT_CARD,
+        amount: 500
+      });
+      fetchBalance();
+    }
+
+    // 3. Переказ 1000 грн (400 помилка)
+    async function makeOverdraftTransfer() {
+      await sendRequest('/api/v1/transfer/p2p', 'POST', {
+        from_account: CURRENT_CARD,
+        to_account: "4441111122223333",
+        amount: 1000
+      });
+    }
+
+    // 4. Падіння бекенду (500)
+    async function triggerBackendCrash() {
+      await sendRequest('/api/v1/transfer/crash', 'POST');
+    }
+    // 5. Переказ на неіснуючу картку (404 помилка)
+    async function makeInvalidCardTransfer() {
+      await sendRequest('/api/v1/transfer/p2p', 'POST', {
+        from_account: CURRENT_CARD,
+        to_account: "0000000000000000", // Картка, якої немає в accounts_db
+        amount: 10
+  });
+}
+
+    // Авто-завантаження балансу
+    fetchBalance();
+  </script>
+</body>
+</html>

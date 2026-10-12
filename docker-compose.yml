@@ -1,0 +1,84 @@
+services:
+  bank-api:
+    build: .
+    container_name: bank_api
+    ports:
+      - "8000:8000"
+    environment:
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=development
+      - SENTRY_DSN=${SENTRY_DSN:-}
+    volumes:
+      - bank_logs:/app/logs
+    networks:
+      - logging_net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: bank_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    networks:
+      - logging_net
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    container_name: bank_kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - logging_net
+
+  vector:
+    image: timberio/vector:0.34.1-alpine
+    container_name: bank_vector
+    command: [ "--config", "/etc/vector/vector.toml" ]
+    volumes:
+      - ./vector.toml:/etc/vector/vector.toml:ro
+      - bank_logs:/var/log/bank:ro
+    depends_on:
+      - bank-api
+      - elasticsearch
+    networks:
+      - logging_net
+
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: bank_prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - bank-api
+    networks:
+      - logging_net
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: bank_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - logging_net
+
+networks:
+  logging_net:
+    driver: bridge
+
+volumes:
+  bank_logs:
