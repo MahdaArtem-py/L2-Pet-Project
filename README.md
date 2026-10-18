@@ -443,10 +443,38 @@ content in the Capacitor config. Before any release, use an HTTPS API and disabl
 `android.allowMixedContent`. No release distribution is configured at this stage.
 After editing the web source, run `npm run android:sync` before running Android again.
 
-Firebase Crashlytics is not connected yet. Register the Android app with package
-ID `com.mahdaartem.bankl2` in Firebase, then add its configuration and Crashlytics
-integration. Server-side SWIFT errors remain in Sentry; they are not Android crashes.
-An emulator is sufficient to test a native crash and a non-fatal client error.
+Firebase Crashlytics is integrated through `@capacitor-firebase/crashlytics`.
+The Android app uses package ID `com.mahdaartem.bankl2` and its Firebase client
+configuration in `android/app/google-services.json`. This is Android configuration,
+not a Firebase service-account credential. Native Gradle builds apply both the
+Google Services and Crashlytics plugins. Google Analytics is optional and is not
+included in this integration.
+
+The Android client includes a Crashlytics panel with a handled JavaScript error
+and a deliberate native crash. The native crash closes the app; reopen Bank L2
+to let the SDK upload reports. Run the app without an attached debugger when
+testing crashes. Check the Android app in Firebase Console > Crashlytics after
+several minutes. A local "recorded" status means the SDK accepted the event, not
+that the Firebase dashboard has already received it.
+
+Unexpected API HTTP 5xx and network failures are recorded as non-fatal client
+errors, with per-event `trace_id`, sanitized endpoint, method, and HTTP status
+where available. Expected HTTP 400/404 business responses are not crash reports.
+Unhandled JavaScript exceptions and rejected promises are also recorded. Request
+bodies and full card numbers are not added to telemetry. The same trace ID can be
+looked up in the existing backend logs. Server-side SWIFT exceptions remain in
+Sentry; an HTTP 500 alone does not crash Android.
+
+The Crashlytics panel stays hidden in an ordinary browser. For a browser build,
+run `npm run build`; native reporting calls become no-ops. `npm test` covers this
+boundary, JavaScript stack/trace metadata, reporting failures, and HTTP error
+classification.
+
+Local verification on 2026-10-18: debug APK built with Java 25 / Gradle 9.1.0
+and ran on the Android API 37 emulator. The SDK recorded a handled JS error,
+HTTP 500 with trace ID, and the intentional native crash. After restart,
+DataTransport received HTTP 200 from the Crashlytics reports endpoint. Firebase
+Console dashboard visibility must be checked in the project's account.
 
 Dependency audit at bootstrap: npm reports 10 advisories in development tooling
 (Tailwind 3 dependency chain and the Capacitor CLI iOS/xcode dependency chain).

@@ -1,3 +1,4 @@
+import { build } from 'esbuild';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +19,15 @@ html = html.replace('<script src="https://cdn.tailwindcss.com"></script>',
   '<link rel="stylesheet" href="./styles.css">');
 html = html.replace('const API_URL = "http://127.0.0.1:8000";',
   `const API_URL = ${JSON.stringify(apiUrl.href.replace(/\/$/, '')).replaceAll('<', '\\u003c')};`);
+html = html.replace('  <script>', '  <script src="./crashlytics.js"></script>\n  <script>');
+await build({
+  entryPoints: [path.join(root, 'client/crashlytics.js')],
+  outfile: path.join(root, 'dist/crashlytics.js'),
+  bundle: true,
+  format: 'iife',
+  platform: 'browser',
+  target: 'es2020',
+});
 await writeFile(path.join(root, 'dist/index.html'), html);
 execFileSync(process.execPath, [
   path.join(root, 'node_modules/tailwindcss/lib/cli.js'),

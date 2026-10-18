@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "154742002328",
+    "project_id": "bank-l2",
+    "storage_bucket": "bank-l2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:154742002328:android:6415ab49c659f0cb20f6ed",
+        "android_client_info": {
+          "package_name": "com.mahdaartem.bankl2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB83SAVJfv6ZODkPTKWNXoj95GANXl6J3c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

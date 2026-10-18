@@ -64,6 +64,16 @@
       </div>
     </div>
 
+    <section id="crashlyticsPanel" hidden class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
+      <h2 class="text-lg font-semibold">Firebase Crashlytics</h2>
+      <p id="crashlyticsStatus" role="status" aria-live="polite" class="text-sm text-slate-300">Підключення...</p>
+      <div class="grid grid-cols-1 gap-3">
+        <button id="nonFatalButton" disabled class="bg-sky-700 py-3 px-4 rounded-lg text-left disabled:opacity-50">Записати тестову помилку без закриття</button>
+        <button id="nativeCrashButton" disabled class="bg-rose-700 py-3 px-4 rounded-lg text-left disabled:opacity-50">Тест Android-крашу — застосунок закриється</button>
+      </div>
+      <p class="text-xs text-slate-400">Після крашу відкрийте Bank L2 повторно, щоб надіслати звіт у Firebase.</p>
+    </section>
+
     <!-- Консоль відповіді від сервера -->
     <div class="bg-black/80 border border-slate-800 rounded-xl p-4 font-mono text-xs space-y-2">
       <div class="flex justify-between text-slate-500 border-b border-slate-800 pb-1">
@@ -88,6 +98,12 @@ const API_URL = "http://127.0.0.1:8000";
       const logElement = document.getElementById("outputLog");
       logElement.innerText = "Надсилання запиту...";
 
+      const crashContext = {
+        trace_id: traceId,
+        endpoint: endpoint.replace(/\b\d{12,19}\b/g, ':card'),
+        method
+      };
+      void window.BankCrashlytics?.noteRequest(crashContext);
       try {
         const response = await fetch(`${API_URL}${endpoint}`, {
           method: method,
@@ -98,7 +114,16 @@ const API_URL = "http://127.0.0.1:8000";
           body: body ? JSON.stringify(body) : null
         });
 
-        const data = await response.json();
+        // Preserve the HTTP response even when a gateway returns non-JSON content.
+        const responseText = await response.text();
+        let data;
+        try { data = JSON.parse(responseText); }
+        catch { data = { detail: responseText }; }
+        if (response.status >= 500) {
+          void window.BankCrashlytics?.recordError(new Error('Bank API server failure'), {
+            ...crashContext, http_status: response.status, scenario: 'api_server_error'
+          });
+        }
 
         logElement.innerText = JSON.stringify({
           http_status: response.status,
@@ -108,6 +133,9 @@ const API_URL = "http://127.0.0.1:8000";
 
         return { status: response.status, data };
       } catch (err) {
+        void window.BankCrashlytics?.recordError(new Error('Bank API network failure'), {
+          ...crashContext, scenario: 'api_network_error'
+        });
         logElement.innerText = `Network Error / Server unreachable:\n${err.message}`;
       }
     }
