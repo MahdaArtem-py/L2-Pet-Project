@@ -411,7 +411,7 @@ The existing `index.html` is the shared source for the browser and Capacitor And
 client. Build scripts bundle Tailwind CSS locally and copy the page into `dist/`.
 The FastAPI backend continues running on the computer or a separate server.
 
-Requirements: Node.js 22+, Android Studio, its bundled JDK, Android SDK, and an AVD
+Requirements: Node.js 22+, Android Studio with JDK 25, Android SDK, and an AVD
 created in Android Studio's Device Manager. Open `android/` in Android Studio and
 let Gradle sync before the first run. Select the AVD and run the `app` configuration.
 
@@ -452,3 +452,37 @@ Dependency audit at bootstrap: npm reports 10 advisories in development tooling
 (Tailwind 3 dependency chain and the Capacitor CLI iOS/xcode dependency chain).
 `npm audit --omit=dev` checks the shipped npm runtime dependencies separately.
 Resolve or reassess these before adopting this bootstrap for release builds.
+
+### Java 25 and Gradle
+
+The Android wrapper is pinned to Gradle 9.1.0, the first Gradle release with
+Java 25 runtime support. The Android Gradle Plugin stays on 8.13.0 to match
+Capacitor 8.5.3. Java source and bytecode targets remain 21 as required by the
+Capacitor modules; the compiler comes from JDK 25, so no separate JDK 21 is needed.
+
+In Android Studio, open the `android/` directory and select its bundled JDK 25
+in Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JDK.
+On this workstation its path is `W:\AndroidStudio\jbr`.
+
+For a terminal build, set `JAVA_HOME` for the current session (adjust the Studio
+path on other computers), then run from the repository root:
+
+```powershell
+$env:JAVA_HOME = 'W:\AndroidStudio\jbr'
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+npm run android:sync
+Push-Location android
+try {
+    .\gradlew.bat --version
+    .\gradlew.bat assembleDebug
+} finally {
+    Pop-Location
+}
+```
+
+The first build needs internet access to download Gradle, Google/Maven dependencies,
+and Android SDK Platform 36 if it is not installed. An API 37 emulator can run this
+app, but its system image does not replace the compile SDK Platform 36.
+If Gradle download reports a connection timeout, check network/proxy settings and
+retry Android Studio's Sync Project with Gradle Files. This failure happens before
+compilation and does not establish whether the full Android build succeeds.
