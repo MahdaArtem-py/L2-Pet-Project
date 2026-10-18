@@ -404,3 +404,51 @@ In Grafana:
 - Requests by Endpoint
 - Requests per Minute
 - 5xx Server Errors
+
+## Android client (initial setup)
+
+The existing `index.html` is the shared source for the browser and Capacitor Android
+client. Build scripts bundle Tailwind CSS locally and copy the page into `dist/`.
+The FastAPI backend continues running on the computer or a separate server.
+
+Requirements: Node.js 22+, Android Studio, its bundled JDK, Android SDK, and an AVD
+created in Android Studio's Device Manager. Open `android/` in Android Studio and
+let Gradle sync before the first run. Select the AVD and run the `app` configuration.
+
+```powershell
+npm ci
+npm run android:sync
+npm run android:open
+```
+
+Start just the local backend if the full observability stack is unnecessary:
+
+```powershell
+docker compose up --build bank-api
+```
+
+The Android build defaults to `http://10.0.2.2:8000`, the emulator's route to the
+computer's localhost. The browser build (`npm run build`) defaults to
+`http://127.0.0.1:8000`. The original `index.html` still works as before.
+To use another backend, set `BANK_API_URL` before building or syncing:
+
+```powershell
+$env:BANK_API_URL = 'https://your-bank-api.example.com'
+npm run android:sync
+Remove-Item Env:BANK_API_URL
+```
+
+Local emulator development permits HTTP in the debug Android manifest and mixed
+content in the Capacitor config. Before any release, use an HTTPS API and disable
+`android.allowMixedContent`. No release distribution is configured at this stage.
+After editing the web source, run `npm run android:sync` before running Android again.
+
+Firebase Crashlytics is not connected yet. Register the Android app with package
+ID `com.mahdaartem.bankl2` in Firebase, then add its configuration and Crashlytics
+integration. Server-side SWIFT errors remain in Sentry; they are not Android crashes.
+An emulator is sufficient to test a native crash and a non-fatal client error.
+
+Dependency audit at bootstrap: npm reports 10 advisories in development tooling
+(Tailwind 3 dependency chain and the Capacitor CLI iOS/xcode dependency chain).
+`npm audit --omit=dev` checks the shipped npm runtime dependencies separately.
+Resolve or reassess these before adopting this bootstrap for release builds.

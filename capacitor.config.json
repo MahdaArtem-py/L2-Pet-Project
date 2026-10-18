@@ -1,0 +1,6 @@
+{
+  "appId": "com.mahdaartem.bankl2",
+  "appName": "Bank L2",
+  "webDir": "dist",
+  "android": { "allowMixedContent": true }
+}
