@@ -44,6 +44,11 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
+// Firebase client configuration is supplied locally, outside version control.
+if (!file('google-services.json').isFile()) {
+    throw new GradleException('Missing android/app/google-services.json. Download it from Firebase Project settings for com.mahdaartem.bankl2; see README.md.')
+}
+
 // Required for Firebase initialization and Crashlytics build IDs.
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'

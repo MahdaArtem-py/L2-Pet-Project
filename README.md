@@ -412,8 +412,12 @@ client. Build scripts bundle Tailwind CSS locally and copy the page into `dist/`
 The FastAPI backend continues running on the computer or a separate server.
 
 Requirements: Node.js 22+, Android Studio with JDK 25, Android SDK, and an AVD
-created in Android Studio's Device Manager. Open `android/` in Android Studio and
-let Gradle sync before the first run. Select the AVD and run the `app` configuration.
+created in Android Studio's Device Manager. Before opening the Android project,
+download `google-services.json` from Firebase Console > Project settings > Your
+apps > Android app (`com.mahdaartem.bankl2`) and put it in `android/app/`.
+The file is local and ignored by Git. Keep it out of commits when replacing it.
+Then open `android/` in Android Studio and let Gradle sync before the first run.
+Select the AVD and run the `app` configuration.
 
 ```powershell
 npm ci
@@ -445,8 +449,14 @@ After editing the web source, run `npm run android:sync` before running Android 
 
 Firebase Crashlytics is integrated through `@capacitor-firebase/crashlytics`.
 The Android app uses package ID `com.mahdaartem.bankl2` and its Firebase client
-configuration in `android/app/google-services.json`. This is Android configuration,
-not a Firebase service-account credential. Native Gradle builds apply both the
+configuration in the local, Git-ignored `android/app/google-services.json`.
+A fresh clone needs this file downloaded from Firebase before Android Gradle sync.
+This is client configuration, not a Firebase service-account credential. Firebase
+API keys are public identifiers by design when restricted to Firebase APIs; review
+those restrictions in Google Cloud Console > APIs & Services > Credentials.
+Removing a config file from the current branch does not remove earlier commits or
+revoke a key. See https://firebase.google.com/docs/projects/api-keys.
+Native Gradle builds apply both the
 Google Services and Crashlytics plugins. Google Analytics is optional and is not
 included in this integration.
 
